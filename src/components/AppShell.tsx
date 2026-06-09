@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { CalendarDays, ClipboardCheck, LogOut, ShieldCheck, Timer, Users, Warehouse } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
 
@@ -34,8 +35,8 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
     <div className="min-h-screen bg-[#f6f5ef]">
       <header className="sticky top-0 z-10 border-b border-black/10 bg-white/95">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
-          <Link href={profile.role === "admin" ? "/admin" : "/today"} className="font-bold text-ink">
-            ClockStart
+          <Link href={profile.role === "admin" ? "/admin" : "/today"} className="min-w-0">
+            <BrandLogo compact />
           </Link>
           <div className="min-w-0 text-right text-xs text-steel">
             <div className="truncate font-medium text-ink">{profile.full_name}</div>

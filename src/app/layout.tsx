@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ClockStart MVP",
-  description: "Employee clock-in, clock-out and daily pre-starts for worksites."
+  title: "Rural Metal Traders ClockStart",
+  description: "Employee clock-in, clock-out and daily pre-starts for Rural Metal Traders."
 };
 
 export const viewport: Viewport = {

@@ -175,5 +175,6 @@ create policy "audit admin insert" on public.audit_logs
 
 insert into public.workplaces (name, address, latitude, longitude, allowed_radius_meters)
 values
+  ('Roma Yard', '222 Raglan Street, Roma QLD 4455', -26.5733, 148.7869, 200),
   ('Main Yard', 'Brisbane QLD', -27.4705, 153.0260, 250),
   ('North Civil Site', 'North Brisbane QLD', -27.3810, 153.0234, 300);

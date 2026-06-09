@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
+import { BrandLogo } from "@/components/BrandLogo";
 import { Button, Card, Input } from "@/components/ui";
 import { supabase } from "@/lib/supabase";
 import { getSessionProfile } from "@/lib/data";
@@ -34,7 +35,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-[#f6f5ef] px-4 py-8">
       <Card className="w-full max-w-md">
         <div className="mb-6">
-          <p className="text-sm font-bold uppercase tracking-wide text-clay">ClockStart</p>
+          <BrandLogo />
           <h1 className="mt-1 text-3xl font-bold text-ink">Sign in</h1>
           <p className="mt-2 text-sm text-steel">Use your workplace email and password.</p>
         </div>

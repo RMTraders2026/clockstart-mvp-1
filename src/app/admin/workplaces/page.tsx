@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Save } from "lucide-react";
+import { MapPin, Plus, Save, Search } from "lucide-react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Button, Card, Input, PageTitle, StatusPill } from "@/components/ui";
+import { lookupAddress } from "@/lib/geocode";
 import { supabase } from "@/lib/supabase";
 import type { Workplace } from "@/lib/types";
 
@@ -17,8 +18,15 @@ export default function WorkplacesPage() {
 
 function Workplaces() {
   const [rows, setRows] = useState<Workplace[]>([]);
-  const [form, setForm] = useState({ name: "", address: "", latitude: "", longitude: "", radius: "200" });
+  const [form, setForm] = useState({
+    name: "Roma Yard",
+    address: "222 Raglan Street, Roma QLD 4455",
+    latitude: "",
+    longitude: "",
+    radius: "200"
+  });
   const [message, setMessage] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
 
   async function load() {
     const { data } = await supabase.from("workplaces").select("*").order("name");
@@ -46,6 +54,24 @@ function Workplaces() {
     }
   }
 
+  async function lookupNewWorkplaceAddress() {
+    try {
+      setLookingUp(true);
+      setMessage("");
+      const result = await lookupAddress(form.address);
+      setForm({
+        ...form,
+        latitude: result.latitude.toFixed(6),
+        longitude: result.longitude.toFixed(6)
+      });
+      setMessage(`Coordinates found for ${result.displayName}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Address lookup failed.");
+    } finally {
+      setLookingUp(false);
+    }
+  }
+
   async function updateWorkplace(id: string, changes: Partial<Workplace>) {
     const { error } = await supabase.from("workplaces").update(changes).eq("id", id);
     if (error) setMessage(error.message);
@@ -59,29 +85,61 @@ function Workplaces() {
     <>
       <PageTitle title="Workplaces" subtitle="Manage active sites and GPS radius settings." />
       <Card className="mb-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_130px_130px_130px_auto]">
+        <div className="mb-3 flex items-start gap-2 rounded-md bg-field/10 p-3 text-sm text-field">
+          <MapPin className="mt-0.5 shrink-0" size={18} />
+          <p className="font-semibold">Enter the workplace address, then use lookup to fill latitude and longitude automatically.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.3fr_130px_130px_130px_auto_auto]">
           <Input placeholder="Name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
           <Input placeholder="Address" value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} />
           <Input placeholder="Latitude" value={form.latitude} onChange={(event) => setForm({ ...form, latitude: event.target.value })} />
           <Input placeholder="Longitude" value={form.longitude} onChange={(event) => setForm({ ...form, longitude: event.target.value })} />
           <Input placeholder="Radius m" value={form.radius} onChange={(event) => setForm({ ...form, radius: event.target.value })} />
+          <Button className="bg-safety text-ink" disabled={lookingUp} onClick={lookupNewWorkplaceAddress}>
+            <Search size={18} />
+            Lookup
+          </Button>
           <Button className="bg-ink text-white" onClick={addWorkplace}><Plus size={18} />Add</Button>
         </div>
         {message ? <p className="mt-3 rounded-md bg-safety/25 p-3 text-sm font-semibold">{message}</p> : null}
       </Card>
       <div className="space-y-3">
-        {rows.map((row) => <WorkplaceRow key={row.id} row={row} onUpdate={updateWorkplace} />)}
+        {rows.map((row) => <WorkplaceRow key={row.id} row={row} onUpdate={updateWorkplace} onMessage={setMessage} />)}
       </div>
     </>
   );
 }
 
-function WorkplaceRow({ row, onUpdate }: { row: Workplace; onUpdate: (id: string, changes: Partial<Workplace>) => void }) {
+function WorkplaceRow({
+  row,
+  onUpdate,
+  onMessage
+}: {
+  row: Workplace;
+  onUpdate: (id: string, changes: Partial<Workplace>) => void;
+  onMessage: (message: string) => void;
+}) {
   const [name, setName] = useState(row.name);
   const [address, setAddress] = useState(row.address ?? "");
   const [latitude, setLatitude] = useState(String(row.latitude ?? ""));
   const [longitude, setLongitude] = useState(String(row.longitude ?? ""));
   const [radius, setRadius] = useState(String(row.allowed_radius_meters ?? ""));
+  const [lookingUp, setLookingUp] = useState(false);
+
+  async function lookupExistingAddress() {
+    try {
+      setLookingUp(true);
+      onMessage("");
+      const result = await lookupAddress(address);
+      setLatitude(result.latitude.toFixed(6));
+      setLongitude(result.longitude.toFixed(6));
+      onMessage(`Coordinates found for ${result.displayName}. Save this workplace to keep them.`);
+    } catch (error) {
+      onMessage(error instanceof Error ? error.message : "Address lookup failed.");
+    } finally {
+      setLookingUp(false);
+    }
+  }
 
   return (
     <Card>
@@ -89,12 +147,16 @@ function WorkplaceRow({ row, onUpdate }: { row: Workplace; onUpdate: (id: string
         <p className="font-bold">{row.name}</p>
         <StatusPill tone={row.active ? "good" : "neutral"}>{row.active ? "Active" : "Inactive"}</StatusPill>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_130px_130px_130px_auto_auto]">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.3fr_130px_130px_130px_auto_auto_auto]">
         <Input value={name} onChange={(event) => setName(event.target.value)} />
         <Input value={address} onChange={(event) => setAddress(event.target.value)} />
         <Input value={latitude} onChange={(event) => setLatitude(event.target.value)} />
         <Input value={longitude} onChange={(event) => setLongitude(event.target.value)} />
         <Input value={radius} onChange={(event) => setRadius(event.target.value)} />
+        <Button className="bg-safety text-ink" disabled={lookingUp} onClick={lookupExistingAddress}>
+          <Search size={18} />
+          Lookup
+        </Button>
         <Button className="bg-field text-white" onClick={() => onUpdate(row.id, {
           name,
           address: address || null,
