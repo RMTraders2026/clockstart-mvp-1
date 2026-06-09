@@ -28,7 +28,8 @@ export default function LoginPage() {
     }
 
     const { profile } = await getSessionProfile();
-    router.replace(profile?.role === "admin" ? "/admin" : "/today");
+    const nextPath = new URLSearchParams(window.location.search).get("next");
+    router.replace(nextPath || (profile?.role === "admin" ? "/admin" : "/today"));
   }
 
   return (

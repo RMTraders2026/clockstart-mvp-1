@@ -9,6 +9,7 @@ import type { Profile } from "@/lib/types";
 
 const employeeLinks = [
   { href: "/today", label: "Today", icon: Timer },
+  { href: "/machine-prestart", label: "Machine", icon: Cog },
   { href: "/my-timesheets", label: "My sheets", icon: CalendarDays }
 ];
 

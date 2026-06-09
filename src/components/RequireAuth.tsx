@@ -20,7 +20,8 @@ export function RequireAuth({
   useEffect(() => {
     getSessionProfile().then(({ user, profile }) => {
       if (!user || !profile || !profile.active) {
-        router.replace("/login");
+        const nextPath = `${window.location.pathname}${window.location.search}`;
+        router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
         return;
       }
       if (role && profile.role !== role) {

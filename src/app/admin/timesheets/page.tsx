@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { EllipsisVertical, Save } from "lucide-react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Button, Card, Input, PageTitle, Select, StatusPill, Textarea } from "@/components/ui";
 import { logAudit } from "@/lib/admin";
@@ -105,6 +105,7 @@ function TimesheetCard({
 }) {
   const [breakMinutes, setBreakMinutes] = useState(String(row.break_minutes ?? 0));
   const [notes, setNotes] = useState(row.work_notes ?? "");
+  const [showActions, setShowActions] = useState(row.status === "submitted");
 
   return (
     <Card>
@@ -113,7 +114,18 @@ function TimesheetCard({
           <h2 className="font-bold">{row.profiles?.full_name}</h2>
           <p className="text-sm text-steel">{row.workplaces?.name} - {row.date}</p>
         </div>
-        <StatusPill tone={row.status === "approved" ? "good" : row.status === "rejected" ? "bad" : row.status === "submitted" ? "warn" : "neutral"}>{row.status}</StatusPill>
+        <div className="flex items-center gap-2">
+          <StatusPill tone={row.status === "approved" ? "good" : row.status === "rejected" ? "bad" : row.status === "submitted" ? "warn" : "neutral"}>{row.status}</StatusPill>
+          {row.status !== "submitted" ? (
+            <button
+              aria-label="Show timesheet actions"
+              className="focus-ring rounded-md border border-black/10 bg-white p-2 text-ink"
+              onClick={() => setShowActions((current) => !current)}
+            >
+              <EllipsisVertical size={18} />
+            </button>
+          ) : null}
+        </div>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
         <div><dt className="text-steel">In</dt><dd className="font-semibold">{formatDateTime(row.clock_in_time)}</dd></div>
@@ -121,15 +133,19 @@ function TimesheetCard({
         <div><dt className="text-steel">Hours</dt><dd className="font-semibold">{row.total_hours ?? "-"}</dd></div>
         <div><dt className="text-steel">GPS</dt><dd className="font-semibold">{row.clock_in_outside_radius || row.clock_out_outside_radius ? "Flagged" : "OK"}</dd></div>
       </dl>
-      <div className="mt-4 grid gap-3 sm:grid-cols-[160px_1fr]">
-        <label className="text-sm font-semibold">Break minutes<Input type="number" min="0" value={breakMinutes} onChange={(event) => setBreakMinutes(event.target.value)} /></label>
-        <label className="text-sm font-semibold">Notes<Textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
-      </div>
-      <div className="mt-4 grid gap-2 sm:flex">
-        <Button className="bg-field text-white" onClick={() => onStatus(row, "approved")}>Approve</Button>
-        <Button className="bg-red-700 text-white" onClick={() => onStatus(row, "rejected")}>Reject</Button>
-        <Button className="bg-ink text-white" onClick={() => onCorrect(row, breakMinutes, notes)}><Save size={18} />Save correction</Button>
-      </div>
+      {showActions ? (
+        <>
+          <div className="mt-4 grid gap-3 sm:grid-cols-[160px_1fr]">
+            <label className="text-sm font-semibold">Break minutes<Input type="number" min="0" value={breakMinutes} onChange={(event) => setBreakMinutes(event.target.value)} /></label>
+            <label className="text-sm font-semibold">Notes<Textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
+          </div>
+          <div className="mt-4 grid gap-2 sm:flex">
+            <Button className="bg-field text-white" onClick={() => onStatus(row, "approved")}>Approve</Button>
+            <Button className="bg-red-700 text-white" onClick={() => onStatus(row, "rejected")}>Reject</Button>
+            <Button className="bg-ink text-white" onClick={() => onCorrect(row, breakMinutes, notes)}><Save size={18} />Save correction</Button>
+          </div>
+        </>
+      ) : null}
     </Card>
   );
 }
