@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarDays, ClipboardCheck, LogOut, ShieldCheck, Timer, Users, Warehouse } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Cog, LogOut, ShieldCheck, Timer, Users, Warehouse } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
@@ -18,7 +18,8 @@ const adminLinks = [
   { href: "/admin/timesheets", label: "Timesheets", icon: CalendarDays },
   { href: "/admin/prestarts", label: "Pre-starts", icon: ClipboardCheck },
   { href: "/admin/employees", label: "Employees", icon: Users },
-  { href: "/admin/workplaces", label: "Sites", icon: Warehouse }
+  { href: "/admin/workplaces", label: "Sites", icon: Warehouse },
+  { href: "/admin/machines", label: "Machines", icon: Cog }
 ];
 
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {

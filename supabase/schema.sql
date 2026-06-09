@@ -85,6 +85,34 @@ create table public.audit_logs (
   created_at timestamptz not null default now()
 );
 
+create table public.machines (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  asset_number text,
+  workplace_id uuid references public.workplaces(id),
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table public.machine_prestarts (
+  id uuid primary key default gen_random_uuid(),
+  machine_id uuid not null references public.machines(id),
+  employee_id uuid not null references public.profiles(id),
+  date date not null,
+  safe_to_operate boolean not null,
+  fluids_checked boolean not null,
+  tyres_tracks_checked boolean not null,
+  guards_checked boolean not null,
+  brakes_steering_checked boolean not null,
+  faults_reported boolean not null,
+  start_hour_meter numeric(10, 2) not null,
+  finish_hour_meter numeric(10, 2),
+  machine_hours numeric(10, 2),
+  comments text,
+  submitted_at timestamptz not null default now(),
+  constraint finish_after_start check (finish_hour_meter is null or finish_hour_meter >= start_hour_meter)
+);
+
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -140,6 +168,8 @@ alter table public.workplaces enable row level security;
 alter table public.prestarts enable row level security;
 alter table public.timesheets enable row level security;
 alter table public.audit_logs enable row level security;
+alter table public.machines enable row level security;
+alter table public.machine_prestarts enable row level security;
 
 create policy "profiles own read" on public.profiles
   for select using (id = auth.uid() or public.is_admin());
@@ -173,8 +203,26 @@ create policy "audit admin read" on public.audit_logs
 create policy "audit admin insert" on public.audit_logs
   for insert with check (public.is_admin());
 
+create policy "machines active read" on public.machines
+  for select using (active = true or public.is_admin());
+create policy "machines admin write" on public.machines
+  for all using (public.is_admin()) with check (public.is_admin());
+
+create policy "machine prestarts own insert" on public.machine_prestarts
+  for insert with check (employee_id = auth.uid());
+create policy "machine prestarts own or admin read" on public.machine_prestarts
+  for select using (employee_id = auth.uid() or public.is_admin());
+create policy "machine prestarts admin update" on public.machine_prestarts
+  for update using (public.is_admin()) with check (public.is_admin());
+
 insert into public.workplaces (name, address, latitude, longitude, allowed_radius_meters)
 values
   ('Roma Yard', '222 Raglan Street, Roma QLD 4455', -26.5733, 148.7869, 200),
   ('Main Yard', 'Brisbane QLD', -27.4705, 153.0260, 250),
   ('North Civil Site', 'North Brisbane QLD', -27.3810, 153.0234, 300);
+
+insert into public.machines (name, asset_number, workplace_id)
+select 'Scrap Handler', 'RMT-001', id
+from public.workplaces
+where name = 'Roma Yard'
+limit 1;

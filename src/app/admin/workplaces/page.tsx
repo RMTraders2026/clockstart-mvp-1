@@ -5,6 +5,7 @@ import { MapPin, Plus, Save, Search } from "lucide-react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Button, Card, Input, PageTitle, StatusPill } from "@/components/ui";
 import { lookupAddress } from "@/lib/geocode";
+import { absoluteAppUrl, qrImageUrl } from "@/lib/qr";
 import { supabase } from "@/lib/supabase";
 import type { Workplace } from "@/lib/types";
 
@@ -125,6 +126,7 @@ function WorkplaceRow({
   const [longitude, setLongitude] = useState(String(row.longitude ?? ""));
   const [radius, setRadius] = useState(String(row.allowed_radius_meters ?? ""));
   const [lookingUp, setLookingUp] = useState(false);
+  const clockInUrl = absoluteAppUrl(`/today?workplaceId=${row.id}`);
 
   async function lookupExistingAddress() {
     try {
@@ -147,24 +149,31 @@ function WorkplaceRow({
         <p className="font-bold">{row.name}</p>
         <StatusPill tone={row.active ? "good" : "neutral"}>{row.active ? "Active" : "Inactive"}</StatusPill>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.3fr_130px_130px_130px_auto_auto_auto]">
-        <Input value={name} onChange={(event) => setName(event.target.value)} />
-        <Input value={address} onChange={(event) => setAddress(event.target.value)} />
-        <Input value={latitude} onChange={(event) => setLatitude(event.target.value)} />
-        <Input value={longitude} onChange={(event) => setLongitude(event.target.value)} />
-        <Input value={radius} onChange={(event) => setRadius(event.target.value)} />
-        <Button className="bg-safety text-ink" disabled={lookingUp} onClick={lookupExistingAddress}>
-          <Search size={18} />
-          Lookup
-        </Button>
-        <Button className="bg-field text-white" onClick={() => onUpdate(row.id, {
-          name,
-          address: address || null,
-          latitude: latitude ? Number(latitude) : null,
-          longitude: longitude ? Number(longitude) : null,
-          allowed_radius_meters: radius ? Number(radius) : null
-        })}><Save size={18} />Save</Button>
-        <Button className="bg-black/10 text-ink" onClick={() => onUpdate(row.id, { active: !row.active })}>{row.active ? "Deactivate" : "Activate"}</Button>
+      <div className="grid gap-4 lg:grid-cols-[1fr_220px]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1.3fr_130px_130px_130px_auto_auto_auto]">
+          <Input value={name} onChange={(event) => setName(event.target.value)} />
+          <Input value={address} onChange={(event) => setAddress(event.target.value)} />
+          <Input value={latitude} onChange={(event) => setLatitude(event.target.value)} />
+          <Input value={longitude} onChange={(event) => setLongitude(event.target.value)} />
+          <Input value={radius} onChange={(event) => setRadius(event.target.value)} />
+          <Button className="bg-safety text-ink" disabled={lookingUp} onClick={lookupExistingAddress}>
+            <Search size={18} />
+            Lookup
+          </Button>
+          <Button className="bg-field text-white" onClick={() => onUpdate(row.id, {
+            name,
+            address: address || null,
+            latitude: latitude ? Number(latitude) : null,
+            longitude: longitude ? Number(longitude) : null,
+            allowed_radius_meters: radius ? Number(radius) : null
+          })}><Save size={18} />Save</Button>
+          <Button className="bg-black/10 text-ink" onClick={() => onUpdate(row.id, { active: !row.active })}>{row.active ? "Deactivate" : "Activate"}</Button>
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-bold">Clock-in QR</p>
+          <img src={qrImageUrl(clockInUrl)} alt={`${row.name} clock-in QR code`} className="h-32 w-32 rounded-md border border-black/10" />
+          <p className="mt-2 break-all text-xs text-steel">{clockInUrl}</p>
+        </div>
       </div>
     </Card>
   );

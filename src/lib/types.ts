@@ -66,6 +66,36 @@ export type Timesheet = {
   workplaces?: Pick<Workplace, "name" | "address"> | null;
 };
 
+export type Machine = {
+  id: string;
+  name: string;
+  asset_number: string | null;
+  workplace_id: string | null;
+  active: boolean;
+  created_at: string;
+  workplaces?: Pick<Workplace, "name"> | null;
+};
+
+export type MachinePrestart = {
+  id: string;
+  machine_id: string;
+  employee_id: string;
+  date: string;
+  safe_to_operate: boolean;
+  fluids_checked: boolean;
+  tyres_tracks_checked: boolean;
+  guards_checked: boolean;
+  brakes_steering_checked: boolean;
+  faults_reported: boolean;
+  start_hour_meter: number;
+  finish_hour_meter: number | null;
+  machine_hours: number | null;
+  comments: string | null;
+  submitted_at: string;
+  profiles?: Pick<Profile, "full_name" | "email"> | null;
+  machines?: Pick<Machine, "name" | "asset_number"> | null;
+};
+
 export type GpsPoint = {
   latitude: number;
   longitude: number;

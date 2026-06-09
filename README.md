@@ -61,7 +61,10 @@ Copy `.env.example` to `.env.local`:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` is only used server-side so admins can create employee logins from inside the app. Never put it in a public browser field except Vercel's secure Environment Variables area.
 
 ## Run Locally
 
@@ -85,6 +88,9 @@ Open `http://localhost:3000`.
 - Admin corrections are limited in the UI to break minutes and notes.
 - Admins can look up a workplace address to fill latitude and longitude.
 - Rural Metal Traders branding is loaded from `public/rural-metal-traders-logo.jpg`.
+- Admins can create employee logins in the app when `SUPABASE_SERVICE_ROLE_KEY` is set.
+- Admins can add machines, print machine QR codes, and export machine pre-start hours to CSV.
+- Workplaces show clock-in QR codes that employees can scan when arriving at the office or yard.
 
 ## Updating An Existing Supabase Project
 
@@ -94,6 +100,16 @@ If the main schema was already run, do not run it again. To add the Roma Yard se
 insert into public.workplaces (name, address, latitude, longitude, allowed_radius_meters, active)
 values ('Roma Yard', '222 Raglan Street, Roma QLD 4455', -26.5733, 148.7869, 200, true);
 ```
+
+To add the machine QR/pre-start tables to an existing project, run `supabase/updates/add-machines-and-qr.sql` in Supabase SQL Editor.
+
+For in-app employee creation, add this Vercel environment variable:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Find it in Supabase under `Project Settings > API > service_role key`. Keep it secret.
 
 ## Vercel Deployment
 

@@ -17,8 +17,9 @@ export default function EmployeesPage() {
 
 function Employees() {
   const [rows, setRows] = useState<Profile[]>([]);
-  const [form, setForm] = useState({ id: "", full_name: "", email: "", role: "employee" as Role });
+  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "employee" as Role });
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     const { data } = await supabase.from("profiles").select("*").order("full_name");
@@ -30,21 +31,26 @@ function Employees() {
   }, []);
 
   async function addEmployee() {
-    if (!form.id || !form.full_name || !form.email) {
-      setMessage("Create the Auth user first, then enter their UUID, name, and email here.");
+    if (!form.full_name || !form.email || !form.password) {
+      setMessage("Enter name, email, and a temporary password.");
       return;
     }
-    const { error } = await supabase.from("profiles").insert({
-      id: form.id,
-      full_name: form.full_name,
-      email: form.email,
-      role: form.role,
-      active: true
+    setBusy(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/admin/employees", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionData.session?.access_token ?? ""}`
+      },
+      body: JSON.stringify(form)
     });
-    if (error) setMessage(error.message);
+    const result = (await response.json()) as { error?: string };
+    setBusy(false);
+    if (!response.ok) setMessage(result.error ?? "Could not create employee.");
     else {
-      setForm({ id: "", full_name: "", email: "", role: "employee" });
-      setMessage("Employee profile added.");
+      setForm({ full_name: "", email: "", password: "", role: "employee" });
+      setMessage("Employee login created.");
       await load();
     }
   }
@@ -62,16 +68,20 @@ function Employees() {
     <>
       <PageTitle title="Employees" subtitle="Add, edit, and deactivate employee profile records." />
       <Card className="mb-4">
-        <p className="mb-3 text-sm text-steel">Create the Auth user in Supabase first, then paste their user UUID here.</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_160px_auto]">
-          <Input placeholder="Auth user UUID" value={form.id} onChange={(event) => setForm({ ...form, id: event.target.value })} />
           <Input placeholder="Full name" value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} />
           <Input placeholder="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+          <Input
+            placeholder="Temporary password"
+            type="password"
+            value={form.password}
+            onChange={(event) => setForm({ ...form, password: event.target.value })}
+          />
           <Select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as Role })}>
             <option value="employee">Employee</option>
             <option value="admin">Admin</option>
           </Select>
-          <Button className="bg-ink text-white" onClick={addEmployee}><Plus size={18} />Add</Button>
+          <Button className="bg-ink text-white" disabled={busy} onClick={addEmployee}><Plus size={18} />Add</Button>
         </div>
         {message ? <p className="mt-3 rounded-md bg-safety/25 p-3 text-sm font-semibold">{message}</p> : null}
       </Card>

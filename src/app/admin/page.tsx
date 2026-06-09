@@ -47,21 +47,27 @@ function AdminDashboard() {
     <>
       <PageTitle title="Admin Dashboard" subtitle="Live clock-ins, pending approvals, and GPS review flags." />
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
+        <Link href="/admin/current-clock-ins" className="focus-ring rounded-md">
+          <Card className="h-full transition hover:border-field">
           <Clock className="mb-3 text-field" />
           <p className="text-3xl font-bold">{active.length}</p>
           <p className="text-sm text-steel">Currently clocked in</p>
-        </Card>
-        <Card>
+          </Card>
+        </Link>
+        <Link href="/admin/timesheets" className="focus-ring rounded-md">
+          <Card className="h-full transition hover:border-field">
           <CheckCircle2 className="mb-3 text-clay" />
           <p className="text-3xl font-bold">{submittedCount}</p>
           <p className="text-sm text-steel">Awaiting review</p>
-        </Card>
-        <Card>
+          </Card>
+        </Link>
+        <Link href="/admin/timesheets" className="focus-ring rounded-md">
+          <Card className="h-full transition hover:border-field">
           <AlertTriangle className="mb-3 text-safety" />
           <p className="text-3xl font-bold">{outsideCount}</p>
           <p className="text-sm text-steel">GPS flags</p>
-        </Card>
+          </Card>
+        </Link>
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_0.5fr]">
         <Card>
@@ -90,6 +96,9 @@ function AdminDashboard() {
           <Link href="/admin/export" className="focus-ring inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-ink px-4 font-bold text-white">
             <FileDown size={18} />
             Weekly CSV
+          </Link>
+          <Link href="/admin/machines" className="focus-ring mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-field px-4 font-bold text-white">
+            Machine QR and CSV
           </Link>
         </Card>
       </div>

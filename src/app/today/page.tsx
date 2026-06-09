@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock, MapPin, Send } from "lucide-react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Button, Card, Input, PageTitle, Select, StatusPill, Textarea } from "@/components/ui";
@@ -23,6 +24,8 @@ const checks = [
 type CheckKey = (typeof checks)[number][0];
 
 function TodayInner({ profile }: { profile: Profile }) {
+  const searchParams = useSearchParams();
+  const requestedWorkplaceId = searchParams.get("workplaceId") ?? "";
   const [workplaces, setWorkplaces] = useState<Workplace[]>([]);
   const [workplaceId, setWorkplaceId] = useState("");
   const [prestart, setPrestart] = useState<Prestart | null>(null);
@@ -50,7 +53,7 @@ function TodayInner({ profile }: { profile: Profile }) {
   async function refresh() {
     const sites = await getActiveWorkplaces();
     setWorkplaces(sites);
-    setWorkplaceId((current) => current || sites[0]?.id || "");
+    setWorkplaceId((current) => current || requestedWorkplaceId || sites[0]?.id || "");
 
     const { data: active } = await supabase
       .from("timesheets")
@@ -267,5 +270,9 @@ function TodayInner({ profile }: { profile: Profile }) {
 }
 
 export default function TodayPage() {
-  return <RequireAuth role="employee">{(profile) => <TodayInner profile={profile} />}</RequireAuth>;
+  return (
+    <Suspense fallback={<div className="p-4 text-sm font-semibold text-steel">Loading...</div>}>
+      <RequireAuth role="employee">{(profile) => <TodayInner profile={profile} />}</RequireAuth>
+    </Suspense>
+  );
 }
