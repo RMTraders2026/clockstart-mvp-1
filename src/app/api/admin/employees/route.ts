@@ -49,6 +49,8 @@ export async function POST(request: Request) {
     const body = (await request.json()) as {
       full_name?: string;
       email?: string;
+      phone?: string;
+      job_role?: string;
       password?: string;
       role?: Role;
     };
@@ -63,6 +65,8 @@ export async function POST(request: Request) {
       email_confirm: true,
       user_metadata: {
         full_name: body.full_name,
+        phone: body.phone ?? "",
+        job_role: body.job_role ?? "",
         role: body.role ?? "employee"
       }
     });
@@ -75,6 +79,8 @@ export async function POST(request: Request) {
       id: data.user.id,
       full_name: body.full_name,
       email: body.email,
+      phone: body.phone ?? null,
+      job_role: body.job_role ?? null,
       role: body.role ?? "employee",
       active: true
     });

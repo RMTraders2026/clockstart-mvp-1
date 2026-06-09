@@ -7,6 +7,8 @@ create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
   email text not null unique,
+  phone text,
+  job_role text,
   role public.user_role not null default 'employee',
   active boolean not null default true,
   created_at timestamptz not null default now()
@@ -105,9 +107,11 @@ create table public.machine_prestarts (
   guards_checked boolean not null,
   brakes_steering_checked boolean not null,
   faults_reported boolean not null,
+  hour_meter numeric(10, 2),
   start_hour_meter numeric(10, 2) not null,
   finish_hour_meter numeric(10, 2),
   machine_hours numeric(10, 2),
+  photo_url text,
   comments text,
   submitted_at timestamptz not null default now(),
   constraint finish_after_start check (finish_hour_meter is null or finish_hour_meter >= start_hour_meter)
@@ -148,11 +152,13 @@ security definer
 set search_path = public
 as $$
 begin
-  insert into public.profiles (id, full_name, email, role)
+  insert into public.profiles (id, full_name, email, phone, job_role, role)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.email,
+    new.raw_user_meta_data->>'phone',
+    new.raw_user_meta_data->>'job_role',
     coalesce((new.raw_user_meta_data->>'role')::public.user_role, 'employee')
   );
   return new;
@@ -214,6 +220,16 @@ create policy "machine prestarts own or admin read" on public.machine_prestarts
   for select using (employee_id = auth.uid() or public.is_admin());
 create policy "machine prestarts admin update" on public.machine_prestarts
   for update using (public.is_admin()) with check (public.is_admin());
+
+insert into storage.buckets (id, name, public)
+values ('machine-prestart-photos', 'machine-prestart-photos', true)
+on conflict (id) do update set public = true;
+
+create policy "machine photos public read" on storage.objects
+  for select using (bucket_id = 'machine-prestart-photos');
+
+create policy "machine photos authenticated upload" on storage.objects
+  for insert with check (bucket_id = 'machine-prestart-photos' and auth.role() = 'authenticated');
 
 insert into public.workplaces (name, address, latitude, longitude, allowed_radius_meters)
 values

@@ -1,9 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, ClipboardCheck, Clock, MapPin, Send } from "lucide-react";
+import { CheckCircle2, Clock, MapPin, Send } from "lucide-react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Button, Card, Input, PageTitle, Select, StatusPill, Textarea } from "@/components/ui";
 import { getActiveWorkplaces } from "@/lib/data";
@@ -202,22 +201,6 @@ function TodayInner({ profile }: { profile: Profile }) {
           {message ? <p className="mt-3 rounded-md bg-safety/25 p-3 text-sm font-semibold">{message}</p> : null}
         </Card>
       </div>
-
-      <Card className="mt-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-bold">Machine Pre-starts</h2>
-            <p className="mt-1 text-sm text-steel">Select a machine, complete the checklist, and log hour meter readings.</p>
-          </div>
-          <Link
-            href="/machine-prestart"
-            className="focus-ring inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-ink px-4 font-bold text-white"
-          >
-            <ClipboardCheck size={18} />
-            Open machine pre-start
-          </Link>
-        </div>
-      </Card>
 
       {!prestart && !activeSheet ? (
         <Card className="mt-4">

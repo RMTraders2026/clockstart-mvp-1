@@ -5,6 +5,8 @@ export type Profile = {
   id: string;
   full_name: string;
   email: string;
+  phone: string | null;
+  job_role: string | null;
   role: Role;
   active: boolean;
   created_at: string;
@@ -87,9 +89,11 @@ export type MachinePrestart = {
   guards_checked: boolean;
   brakes_steering_checked: boolean;
   faults_reported: boolean;
+  hour_meter: number | null;
   start_hour_meter: number;
   finish_hour_meter: number | null;
   machine_hours: number | null;
+  photo_url: string | null;
   comments: string | null;
   submitted_at: string;
   profiles?: Pick<Profile, "full_name" | "email"> | null;

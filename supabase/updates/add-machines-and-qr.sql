@@ -18,9 +18,11 @@ create table if not exists public.machine_prestarts (
   guards_checked boolean not null,
   brakes_steering_checked boolean not null,
   faults_reported boolean not null,
+  hour_meter numeric(10, 2),
   start_hour_meter numeric(10, 2) not null,
   finish_hour_meter numeric(10, 2),
   machine_hours numeric(10, 2),
+  photo_url text,
   comments text,
   submitted_at timestamptz not null default now(),
   constraint finish_after_start check (finish_hour_meter is null or finish_hour_meter >= start_hour_meter)
@@ -28,6 +30,9 @@ create table if not exists public.machine_prestarts (
 
 alter table public.machines enable row level security;
 alter table public.machine_prestarts enable row level security;
+
+alter table public.machine_prestarts add column if not exists hour_meter numeric(10, 2);
+alter table public.machine_prestarts add column if not exists photo_url text;
 
 drop policy if exists "machines active read" on public.machines;
 create policy "machines active read" on public.machines
@@ -48,6 +53,18 @@ create policy "machine prestarts own or admin read" on public.machine_prestarts
 drop policy if exists "machine prestarts admin update" on public.machine_prestarts;
 create policy "machine prestarts admin update" on public.machine_prestarts
   for update using (public.is_admin()) with check (public.is_admin());
+
+insert into storage.buckets (id, name, public)
+values ('machine-prestart-photos', 'machine-prestart-photos', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "machine photos public read" on storage.objects;
+create policy "machine photos public read" on storage.objects
+  for select using (bucket_id = 'machine-prestart-photos');
+
+drop policy if exists "machine photos authenticated upload" on storage.objects;
+create policy "machine photos authenticated upload" on storage.objects
+  for insert with check (bucket_id = 'machine-prestart-photos' and auth.role() = 'authenticated');
 
 insert into public.machines (name, asset_number, workplace_id)
 select 'Scrap Handler', 'RMT-001', id

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Send } from "lucide-react";
 import { RequireAuth } from "@/components/RequireAuth";
@@ -41,19 +41,13 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
     brakes_steering_checked: false,
     faults_reported: false
   });
-  const [startMeter, setStartMeter] = useState("");
-  const [finishMeter, setFinishMeter] = useState("");
+  const [hourMeter, setHourMeter] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
   const [comments, setComments] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   const allChecked = Object.values(checked).every(Boolean);
-  const machineHours = useMemo(() => {
-    const start = Number(startMeter);
-    const finish = Number(finishMeter);
-    if (Number.isNaN(start) || Number.isNaN(finish) || finish < start) return null;
-    return Math.round((finish - start) * 100) / 100;
-  }, [startMeter, finishMeter]);
 
   useEffect(() => {
     supabase
@@ -68,27 +62,43 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
       });
   }, []);
 
+  async function uploadPhoto() {
+    if (!photo) return null;
+    const extension = photo.name.split(".").pop() || "jpg";
+    const filePath = `${profile.id}/${Date.now()}.${extension}`;
+    const { error } = await supabase.storage.from("machine-prestart-photos").upload(filePath, photo);
+    if (error) throw error;
+    const { data } = supabase.storage.from("machine-prestart-photos").getPublicUrl(filePath);
+    return data.publicUrl;
+  }
+
   async function submit() {
-    const start = Number(startMeter);
-    const finish = finishMeter === "" ? null : Number(finishMeter);
-    if (!machineId || !allChecked || Number.isNaN(start) || start < 0) {
-      setMessage("Choose a machine, complete every check, and enter the start hour meter.");
-      return;
-    }
-    if (finish !== null && (Number.isNaN(finish) || finish < start)) {
-      setMessage("Finish hour meter must be equal to or higher than the start meter.");
+    const meter = Number(hourMeter);
+    if (!machineId || !allChecked || Number.isNaN(meter) || meter < 0) {
+      setMessage("Choose a machine, complete every check, and enter the hour meter.");
       return;
     }
 
     setBusy(true);
+    let photoUrl: string | null = null;
+    try {
+      photoUrl = await uploadPhoto();
+    } catch (error) {
+      setBusy(false);
+      setMessage(error instanceof Error ? error.message : "Photo upload failed.");
+      return;
+    }
+
     const { error } = await supabase.from("machine_prestarts").insert({
       machine_id: machineId,
       employee_id: profile.id,
       date: todayBrisbaneIso(),
       ...checked,
-      start_hour_meter: start,
-      finish_hour_meter: finish,
-      machine_hours: finish === null ? null : Math.round((finish - start) * 100) / 100,
+      hour_meter: meter,
+      start_hour_meter: meter,
+      finish_hour_meter: null,
+      machine_hours: null,
+      photo_url: photoUrl,
       comments: comments.trim() || null
     });
     setBusy(false);
@@ -96,8 +106,8 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
     if (error) setMessage(error.message);
     else {
       setMessage("Machine pre-start saved.");
-      setStartMeter("");
-      setFinishMeter("");
+      setHourMeter("");
+      setPhoto(null);
       setComments("");
       setChecked({
         safe_to_operate: false,
@@ -112,7 +122,7 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
 
   return (
     <>
-      <PageTitle title="Machine Pre-start" subtitle="Scan the machine QR code, complete checks, and record hour meter readings." />
+      <PageTitle title="Machine Pre-start" subtitle="Scan the machine QR code, complete checks, and record the hour meter." />
       <Card>
         <div className="space-y-4">
           <label className="block text-sm font-semibold">
@@ -138,17 +148,20 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
               </label>
             ))}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-semibold">
-              Start hour meter
-              <Input type="number" min="0" step="0.1" value={startMeter} onChange={(event) => setStartMeter(event.target.value)} />
-            </label>
-            <label className="text-sm font-semibold">
-              Finish hour meter
-              <Input type="number" min="0" step="0.1" value={finishMeter} onChange={(event) => setFinishMeter(event.target.value)} />
-            </label>
-          </div>
-          {machineHours !== null ? <p className="rounded-md bg-field/10 p-3 text-sm font-bold text-field">Machine hours: {machineHours}</p> : null}
+          <label className="text-sm font-semibold">
+            Hour meter
+            <Input type="number" min="0" step="0.1" value={hourMeter} onChange={(event) => setHourMeter(event.target.value)} />
+          </label>
+          <label className="block text-sm font-semibold">
+            Photo
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
+              className="focus-ring mt-1 w-full rounded-md border border-black/15 bg-white px-3 py-3"
+            />
+          </label>
           <label className="text-sm font-semibold">
             Comments or faults
             <Textarea value={comments} onChange={(event) => setComments(event.target.value)} />

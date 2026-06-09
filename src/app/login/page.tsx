@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogIn } from "lucide-react";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -61,6 +62,12 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </Button>
         </form>
+        <Link
+          href="/signup"
+          className="focus-ring mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-md border border-black/10 bg-white px-4 text-sm font-bold text-ink"
+        >
+          Add new employee
+        </Link>
       </Card>
     </main>
   );

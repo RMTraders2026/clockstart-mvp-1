@@ -17,7 +17,7 @@ export default function EmployeesPage() {
 
 function Employees() {
   const [rows, setRows] = useState<Profile[]>([]);
-  const [form, setForm] = useState({ full_name: "", email: "", password: "", role: "employee" as Role });
+  const [form, setForm] = useState({ full_name: "", email: "", phone: "", job_role: "", password: "", role: "employee" as Role });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -49,7 +49,7 @@ function Employees() {
     setBusy(false);
     if (!response.ok) setMessage(result.error ?? "Could not create employee.");
     else {
-      setForm({ full_name: "", email: "", password: "", role: "employee" });
+      setForm({ full_name: "", email: "", phone: "", job_role: "", password: "", role: "employee" });
       setMessage("Employee login created.");
       await load();
     }
@@ -68,9 +68,11 @@ function Employees() {
     <>
       <PageTitle title="Employees" subtitle="Add, edit, and deactivate employee profile records." />
       <Card className="mb-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_160px_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr]">
           <Input placeholder="Full name" value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} />
           <Input placeholder="Email" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+          <Input placeholder="Phone" type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} />
+          <Input placeholder="Role / position" value={form.job_role} onChange={(event) => setForm({ ...form, job_role: event.target.value })} />
           <Input
             placeholder="Temporary password"
             type="password"

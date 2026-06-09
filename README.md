@@ -103,6 +103,8 @@ values ('Roma Yard', '222 Raglan Street, Roma QLD 4455', -26.5733, 148.7869, 200
 
 To add the machine QR/pre-start tables to an existing project, run `supabase/updates/add-machines-and-qr.sql` in Supabase SQL Editor.
 
+To add employee self-signup fields, single machine hour meter, and machine pre-start photo uploads, run `supabase/updates/add-signup-phone-and-machine-photo.sql` in Supabase SQL Editor.
+
 For in-app employee creation, add this Vercel environment variable:
 
 ```bash
