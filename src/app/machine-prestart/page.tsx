@@ -54,6 +54,7 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
   const [photo, setPhoto] = useState<File | null>(null);
   const [comments, setComments] = useState("");
   const [message, setMessage] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const allChecked = Object.values(statuses).every(Boolean);
@@ -129,12 +130,31 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
 
     if (error) setMessage(error.message);
     else {
-      setMessage("Machine pre-start saved.");
+      setMessage("");
       setHourMeter("");
       setPhoto(null);
       setComments("");
       setStatuses(emptyStatuses);
+      setSubmitted(true);
     }
+  }
+
+  if (submitted) {
+    return (
+      <>
+        <PageTitle title="Machine Pre-start" />
+        <Card>
+          <div className="flex min-h-[360px] flex-col justify-between gap-6 text-center">
+            <div className="flex flex-1 items-center justify-center">
+              <h2 className="text-2xl font-bold text-field">Machine prestart successfully complete</h2>
+            </div>
+            <Button className="w-full bg-ink text-white" onClick={() => setSubmitted(false)}>
+              Return
+            </Button>
+          </div>
+        </Card>
+      </>
+    );
   }
 
   return (
