@@ -10,6 +10,10 @@ import type { Prestart } from "@/lib/types";
 type PrestartRow = Prestart & {
   profiles?: { full_name: string; email: string } | null;
   workplaces?: { name: string } | null;
+  prestart_item_responses?: Array<{
+    checked: boolean;
+    prestart_items?: { label: string; sort_order: number } | null;
+  }>;
 };
 
 export default function AdminPrestartsPage() {
@@ -27,7 +31,7 @@ function AdminPrestarts() {
   useEffect(() => {
     let query = supabase
       .from("prestarts")
-      .select("*, profiles(full_name,email), workplaces(name)")
+      .select("*, profiles(full_name,email), workplaces(name), prestart_item_responses(checked, prestart_items(label,sort_order))")
       .order("submitted_at", { ascending: false });
     if (date) query = query.eq("date", date);
     query.then(({ data }) => setRows((data ?? []) as PrestartRow[]));
@@ -49,14 +53,26 @@ function AdminPrestarts() {
               </div>
               <p className="text-right text-xs font-semibold text-steel">{formatDateTime(row.submitted_at)}</p>
             </div>
-            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-              <p>Fit for work: {row.fit_for_work ? "Yes" : "No"}</p>
-              <p>Not under influence: {row.not_under_influence ? "Yes" : "No"}</p>
-              <p>PPE: {row.ppe_available ? "Yes" : "No"}</p>
-              <p>Hazards understood: {row.hazards_understood ? "Yes" : "No"}</p>
-              <p>Site rules: {row.site_rules_acknowledged ? "Yes" : "No"}</p>
-              <p>Authorised equipment: {row.authorised_equipment_acknowledged ? "Yes" : "No"}</p>
-            </div>
+            {row.prestart_item_responses?.length ? (
+              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                {[...row.prestart_item_responses]
+                  .sort((a, b) => (a.prestart_items?.sort_order ?? 0) - (b.prestart_items?.sort_order ?? 0))
+                  .map((response) => (
+                    <p key={response.prestart_items?.label}>
+                      {response.prestart_items?.label}: {response.checked ? "Yes" : "No"}
+                    </p>
+                  ))}
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <p>Fit for work: {row.fit_for_work ? "Yes" : "No"}</p>
+                <p>Not under influence: {row.not_under_influence ? "Yes" : "No"}</p>
+                <p>PPE: {row.ppe_available ? "Yes" : "No"}</p>
+                <p>Hazards understood: {row.hazards_understood ? "Yes" : "No"}</p>
+                <p>Site rules: {row.site_rules_acknowledged ? "Yes" : "No"}</p>
+                <p>Authorised equipment: {row.authorised_equipment_acknowledged ? "Yes" : "No"}</p>
+              </div>
+            )}
             <p className="mt-3 text-sm font-semibold">Signed: {row.signature_name}</p>
             {row.comments ? <p className="mt-2 rounded-md bg-black/5 p-3 text-sm">{row.comments}</p> : null}
           </Card>

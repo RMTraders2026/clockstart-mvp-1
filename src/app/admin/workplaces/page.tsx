@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapPin, Plus, Save, Search } from "lucide-react";
+import { MapPin, Plus, Save, Search, Trash2 } from "lucide-react";
 import { RequireAuth } from "@/components/RequireAuth";
 import { Button, Card, Input, PageTitle, StatusPill } from "@/components/ui";
 import { lookupAddress } from "@/lib/geocode";
@@ -82,6 +82,19 @@ function Workplaces() {
     }
   }
 
+  async function deleteWorkplace(row: Workplace) {
+    const confirmed = window.confirm(`Completely delete ${row.name}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    const { error } = await supabase.from("workplaces").delete().eq("id", row.id);
+    if (error) {
+      setMessage(`Could not delete ${row.name}. If it has timesheets, pre-starts, or machines linked to it, deactivate it instead.`);
+    } else {
+      setMessage(`${row.name} deleted.`);
+      await load();
+    }
+  }
+
   return (
     <>
       <PageTitle title="Workplaces" subtitle="Manage active sites and GPS radius settings." />
@@ -124,7 +137,15 @@ function Workplaces() {
         {message ? <p className="mt-3 rounded-md bg-safety/25 p-3 text-sm font-semibold">{message}</p> : null}
       </Card>
       <div className="space-y-3">
-        {rows.map((row) => <WorkplaceRow key={row.id} row={row} onUpdate={updateWorkplace} onMessage={setMessage} />)}
+        {rows.map((row) => (
+          <WorkplaceRow
+            key={row.id}
+            row={row}
+            onDelete={deleteWorkplace}
+            onUpdate={updateWorkplace}
+            onMessage={setMessage}
+          />
+        ))}
       </div>
     </>
   );
@@ -132,10 +153,12 @@ function Workplaces() {
 
 function WorkplaceRow({
   row,
+  onDelete,
   onUpdate,
   onMessage
 }: {
   row: Workplace;
+  onDelete: (row: Workplace) => void;
   onUpdate: (id: string, changes: Partial<Workplace>) => void;
   onMessage: (message: string) => void;
 }) {
@@ -194,7 +217,7 @@ function WorkplaceRow({
               <Input value={radius} onChange={(event) => setRadius(event.target.value)} />
             </label>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Button className="bg-safety text-ink" disabled={lookingUp} onClick={lookupExistingAddress}>
               <Search size={18} />
               Lookup coordinates
@@ -207,6 +230,10 @@ function WorkplaceRow({
               allowed_radius_meters: radius ? Number(radius) : null
             })}><Save size={18} />Save</Button>
             <Button className="bg-black/10 text-ink" onClick={() => onUpdate(row.id, { active: !row.active })}>{row.active ? "Deactivate" : "Activate"}</Button>
+            <Button className="bg-red-700 text-white" onClick={() => onDelete(row)}>
+              <Trash2 size={18} />
+              Delete
+            </Button>
           </div>
         </div>
         <div>

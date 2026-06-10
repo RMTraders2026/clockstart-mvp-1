@@ -19,6 +19,22 @@ const checks = [
 ] as const;
 
 type CheckKey = (typeof checks)[number][0];
+type CheckStatus = "satisfactory" | "unsatisfactory" | "na";
+
+const statusOptions: Array<{ value: CheckStatus; label: string }> = [
+  { value: "satisfactory", label: "Satisfactory" },
+  { value: "unsatisfactory", label: "Unsatisfactory" },
+  { value: "na", label: "N/A" }
+];
+
+const emptyStatuses: Record<CheckKey, CheckStatus | ""> = {
+  safe_to_operate: "",
+  fluids_checked: "",
+  tyres_tracks_checked: "",
+  guards_checked: "",
+  brakes_steering_checked: "",
+  faults_reported: ""
+};
 
 export default function MachinePrestartPage() {
   return (
@@ -33,21 +49,14 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
   const machineIdParam = searchParams.get("machineId") ?? "";
   const [machines, setMachines] = useState<Machine[]>([]);
   const [machineId, setMachineId] = useState(machineIdParam);
-  const [checked, setChecked] = useState<Record<CheckKey, boolean>>({
-    safe_to_operate: false,
-    fluids_checked: false,
-    tyres_tracks_checked: false,
-    guards_checked: false,
-    brakes_steering_checked: false,
-    faults_reported: false
-  });
+  const [statuses, setStatuses] = useState<Record<CheckKey, CheckStatus | "">>(emptyStatuses);
   const [hourMeter, setHourMeter] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [comments, setComments] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const allChecked = Object.values(checked).every(Boolean);
+  const allChecked = Object.values(statuses).every(Boolean);
 
   useEffect(() => {
     supabase
@@ -73,9 +82,13 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
   }
 
   async function submit() {
-    const meter = Number(hourMeter);
-    if (!machineId || !allChecked || Number.isNaN(meter) || meter < 0) {
-      setMessage("Choose a machine, complete every check, and enter the hour meter.");
+    const meter = hourMeter === "" ? null : Number(hourMeter);
+    if (!machineId || !allChecked) {
+      setMessage("Choose a machine and complete every checklist item.");
+      return;
+    }
+    if (meter !== null && (Number.isNaN(meter) || meter < 0)) {
+      setMessage("Hour meter must be 0 or more.");
       return;
     }
 
@@ -93,9 +106,20 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
       machine_id: machineId,
       employee_id: profile.id,
       date: todayBrisbaneIso(),
-      ...checked,
+      safe_to_operate: statuses.safe_to_operate !== "unsatisfactory",
+      fluids_checked: statuses.fluids_checked !== "unsatisfactory",
+      tyres_tracks_checked: statuses.tyres_tracks_checked !== "unsatisfactory",
+      guards_checked: statuses.guards_checked !== "unsatisfactory",
+      brakes_steering_checked: statuses.brakes_steering_checked !== "unsatisfactory",
+      faults_reported: statuses.faults_reported !== "unsatisfactory",
+      safe_to_operate_status: statuses.safe_to_operate,
+      fluids_checked_status: statuses.fluids_checked,
+      tyres_tracks_checked_status: statuses.tyres_tracks_checked,
+      guards_checked_status: statuses.guards_checked,
+      brakes_steering_checked_status: statuses.brakes_steering_checked,
+      faults_reported_status: statuses.faults_reported,
       hour_meter: meter,
-      start_hour_meter: meter,
+      start_hour_meter: meter ?? 0,
       finish_hour_meter: null,
       machine_hours: null,
       photo_url: photoUrl,
@@ -109,14 +133,7 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
       setHourMeter("");
       setPhoto(null);
       setComments("");
-      setChecked({
-        safe_to_operate: false,
-        fluids_checked: false,
-        tyres_tracks_checked: false,
-        guards_checked: false,
-        brakes_steering_checked: false,
-        faults_reported: false
-      });
+      setStatuses(emptyStatuses);
     }
   }
 
@@ -137,15 +154,26 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
           </label>
           <div className="space-y-3">
             {checks.map(([key, label]) => (
-              <label key={key} className="flex items-start gap-3 rounded-md border border-black/10 p-3 text-sm font-semibold">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-5 w-5"
-                  checked={checked[key]}
-                  onChange={(event) => setChecked((current) => ({ ...current, [key]: event.target.checked }))}
-                />
-                <span>{label}</span>
-              </label>
+              <div key={key} className="rounded-md border border-black/10 p-3">
+                <p className="text-sm font-bold">{label}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {statusOptions.map((option) => {
+                    const selected = statuses[key] === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`focus-ring min-h-11 rounded-md border px-3 text-sm font-bold ${
+                          selected ? "border-field bg-field text-white" : "border-black/10 bg-white text-ink"
+                        }`}
+                        onClick={() => setStatuses((current) => ({ ...current, [key]: option.value }))}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
           </div>
           <label className="text-sm font-semibold">
@@ -153,11 +181,10 @@ function MachinePrestartInner({ profile }: { profile: Profile }) {
             <Input type="number" min="0" step="0.1" value={hourMeter} onChange={(event) => setHourMeter(event.target.value)} />
           </label>
           <label className="block text-sm font-semibold">
-            Photo
+            Take photo or choose from photo library
             <input
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={(event) => setPhoto(event.target.files?.[0] ?? null)}
               className="focus-ring mt-1 w-full rounded-md border border-black/15 bg-white px-3 py-3"
             />

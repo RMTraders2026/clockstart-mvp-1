@@ -9,13 +9,33 @@ import { supabase } from "@/lib/supabase";
 import type { Machine, MachinePrestart, Workplace } from "@/lib/types";
 
 function machinePrestartsToCsv(rows: MachinePrestart[]) {
-  const headers = ["Date", "Machine", "Asset", "Employee", "Hour meter", "Photo", "Comments"];
+  const headers = [
+    "Date",
+    "Machine",
+    "Asset",
+    "Employee",
+    "Safe to operate",
+    "Fluids",
+    "Tyres/tracks",
+    "Guards",
+    "Brakes/steering",
+    "Faults reported",
+    "Hour meter",
+    "Photo",
+    "Comments"
+  ];
   const escapeCsv = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
   const data = rows.map((row) => [
     row.date,
     row.machines?.name,
     row.machines?.asset_number,
     row.profiles?.full_name,
+    row.safe_to_operate_status,
+    row.fluids_checked_status,
+    row.tyres_tracks_checked_status,
+    row.guards_checked_status,
+    row.brakes_steering_checked_status,
+    row.faults_reported_status,
     row.hour_meter ?? row.start_hour_meter,
     row.photo_url,
     row.comments

@@ -9,36 +9,17 @@ import { getActiveWorkplaces } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import { calculateHours, formatDateTime, todayBrisbaneIso } from "@/lib/dates";
 import { captureLocation, isOutsideWorkplaceRadius } from "@/lib/gps";
-import type { Prestart, Profile, Timesheet, Workplace } from "@/lib/types";
-
-const checks = [
-  ["fit_for_work", "I am fit for work"],
-  ["not_under_influence", "I am not affected by drugs or alcohol"],
-  ["ppe_available", "I have the required PPE"],
-  ["hazards_understood", "I understand today's work area and hazards"],
-  ["site_rules_acknowledged", "I will follow site rules, SWMS, and WHS directions"],
-  ["report_issues_acknowledged", "I will report hazards, incidents, injuries, or unsafe conditions"],
-  ["authorised_equipment_acknowledged", "I understand I must only operate equipment I am licensed or authorised to use"]
-] as const;
-
-type CheckKey = (typeof checks)[number][0];
+import type { Prestart, PrestartItem, PrestartItemResponse, Profile, Timesheet, Workplace } from "@/lib/types";
 
 function TodayInner({ profile }: { profile: Profile }) {
   const searchParams = useSearchParams();
   const requestedWorkplaceId = searchParams.get("workplaceId") ?? "";
   const [workplaces, setWorkplaces] = useState<Workplace[]>([]);
   const [workplaceId, setWorkplaceId] = useState("");
+  const [prestartItems, setPrestartItems] = useState<PrestartItem[]>([]);
   const [prestart, setPrestart] = useState<Prestart | null>(null);
   const [activeSheet, setActiveSheet] = useState<Timesheet | null>(null);
-  const [checked, setChecked] = useState<Record<CheckKey, boolean>>({
-    fit_for_work: false,
-    not_under_influence: false,
-    ppe_available: false,
-    hazards_understood: false,
-    site_rules_acknowledged: false,
-    report_issues_acknowledged: false,
-    authorised_equipment_acknowledged: false
-  });
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [signature, setSignature] = useState(profile.full_name);
   const [comments, setComments] = useState("");
   const [breakMinutes, setBreakMinutes] = useState("");
@@ -47,13 +28,28 @@ function TodayInner({ profile }: { profile: Profile }) {
   const [busy, setBusy] = useState(false);
 
   const selectedWorkplace = useMemo(() => workplaces.find((site) => site.id === workplaceId) ?? null, [workplaces, workplaceId]);
-  const allChecked = Object.values(checked).every(Boolean);
+  const allChecked = prestartItems.length > 0 && prestartItems.every((item) => checked[item.id]);
   const today = todayBrisbaneIso();
 
   async function refresh() {
     const sites = await getActiveWorkplaces();
     setWorkplaces(sites);
     setWorkplaceId((current) => current || requestedWorkplaceId || sites[0]?.id || "");
+
+    const { data: items } = await supabase
+      .from("prestart_items")
+      .select("*")
+      .eq("active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    const activeItems = (items ?? []) as PrestartItem[];
+    setPrestartItems(activeItems);
+    setChecked((current) =>
+      activeItems.reduce<Record<string, boolean>>((next, item) => {
+        next[item.id] = current[item.id] ?? false;
+        return next;
+      }, {})
+    );
 
     const { data: active } = await supabase
       .from("timesheets")
@@ -74,6 +70,27 @@ function TodayInner({ profile }: { profile: Profile }) {
       .eq("date", today)
       .maybeSingle<Prestart>();
     setPrestart(data ?? null);
+    if (!data) {
+      setChecked((current) =>
+        Object.keys(current).reduce<Record<string, boolean>>((next, key) => {
+          next[key] = false;
+          return next;
+        }, {})
+      );
+      return;
+    }
+
+    const { data: responses } = await supabase
+      .from("prestart_item_responses")
+      .select("*")
+      .eq("prestart_id", data.id);
+    setChecked((current) => {
+      const next = { ...current };
+      ((responses ?? []) as PrestartItemResponse[]).forEach((response) => {
+        next[response.prestart_item_id] = response.checked;
+      });
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -95,7 +112,13 @@ function TodayInner({ profile }: { profile: Profile }) {
       employee_id: profile.id,
       workplace_id: workplaceId,
       date: today,
-      ...checked,
+      fit_for_work: true,
+      not_under_influence: true,
+      ppe_available: true,
+      hazards_understood: true,
+      site_rules_acknowledged: true,
+      report_issues_acknowledged: true,
+      authorised_equipment_acknowledged: true,
       signature_name: signature.trim(),
       comments: comments.trim() || null,
       gps_latitude: gps?.latitude ?? null,
@@ -103,11 +126,30 @@ function TodayInner({ profile }: { profile: Profile }) {
       gps_accuracy: gps?.accuracy ?? null,
       submitted_at: new Date().toISOString()
     };
-    const { error } = await supabase.from("prestarts").insert(payload);
+    const result = prestart
+      ? await supabase.from("prestarts").update(payload).eq("id", prestart.id).select("id").single()
+      : await supabase.from("prestarts").insert(payload).select("id").single();
+    const prestartId = (result.data as { id: string } | null)?.id;
+    const error = result.error;
+    if (!error && prestartId) {
+      const responses = prestartItems.map((item) => ({
+        prestart_id: prestartId,
+        prestart_item_id: item.id,
+        checked: checked[item.id] === true
+      }));
+      const { error: responseError } = await supabase.from("prestart_item_responses").upsert(responses, {
+        onConflict: "prestart_id,prestart_item_id"
+      });
+      if (responseError) {
+        setBusy(false);
+        setMessage(responseError.message);
+        return;
+      }
+    }
     setBusy(false);
     if (error) setMessage(error.message);
     else {
-      setMessage("Pre-start submitted.");
+      setMessage(prestart ? "Pre-start updated." : "Pre-start submitted.");
       await refreshPrestart();
     }
   }
@@ -202,21 +244,22 @@ function TodayInner({ profile }: { profile: Profile }) {
         </Card>
       </div>
 
-      {!prestart && !activeSheet ? (
-        <Card className="mt-4">
+      <Card className="mt-4">
           <h2 className="mb-3 text-lg font-bold">Daily Pre-start</h2>
+          {prestart ? <p className="mb-3 rounded-md bg-field/10 p-3 text-sm font-semibold text-field">Already submitted today. You can still update it here if something changes.</p> : null}
           <div className="space-y-3">
-            {checks.map(([key, label]) => (
-              <label key={key} className="flex items-start gap-3 rounded-md border border-black/10 p-3 text-sm font-semibold">
+            {prestartItems.map((item) => (
+              <label key={item.id} className="flex items-start gap-3 rounded-md border border-black/10 p-3 text-sm font-semibold">
                 <input
                   type="checkbox"
                   className="mt-1 h-5 w-5"
-                  checked={checked[key]}
-                  onChange={(event) => setChecked((current) => ({ ...current, [key]: event.target.checked }))}
+                  checked={checked[item.id] === true}
+                  onChange={(event) => setChecked((current) => ({ ...current, [item.id]: event.target.checked }))}
                 />
-                <span>{label}</span>
+                <span>{item.label}</span>
               </label>
             ))}
+            {!prestartItems.length ? <p className="rounded-md bg-safety/25 p-3 text-sm font-semibold">No active pre-start items have been set up yet.</p> : null}
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-semibold">
@@ -230,10 +273,9 @@ function TodayInner({ profile }: { profile: Profile }) {
           </div>
           <Button onClick={submitPrestart} disabled={busy} className="mt-4 w-full bg-ink text-white">
             <Send size={18} />
-            Submit pre-start
+            {prestart ? "Update pre-start" : "Submit pre-start"}
           </Button>
         </Card>
-      ) : null}
 
       <Card className="mt-4">
         {!activeSheet ? (

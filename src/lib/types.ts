@@ -43,6 +43,22 @@ export type Prestart = {
   submitted_at: string;
 };
 
+export type PrestartItem = {
+  id: string;
+  label: string;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+};
+
+export type PrestartItemResponse = {
+  id: string;
+  prestart_id: string;
+  prestart_item_id: string;
+  checked: boolean;
+  created_at: string;
+};
+
 export type Timesheet = {
   id: string;
   employee_id: string;
@@ -89,6 +105,12 @@ export type MachinePrestart = {
   guards_checked: boolean;
   brakes_steering_checked: boolean;
   faults_reported: boolean;
+  safe_to_operate_status: string | null;
+  fluids_checked_status: string | null;
+  tyres_tracks_checked_status: string | null;
+  guards_checked_status: string | null;
+  brakes_steering_checked_status: string | null;
+  faults_reported_status: string | null;
   hour_meter: number | null;
   start_hour_meter: number;
   finish_hour_meter: number | null;

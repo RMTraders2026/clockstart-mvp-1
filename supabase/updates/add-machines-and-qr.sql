@@ -18,6 +18,12 @@ create table if not exists public.machine_prestarts (
   guards_checked boolean not null,
   brakes_steering_checked boolean not null,
   faults_reported boolean not null,
+  safe_to_operate_status text,
+  fluids_checked_status text,
+  tyres_tracks_checked_status text,
+  guards_checked_status text,
+  brakes_steering_checked_status text,
+  faults_reported_status text,
   hour_meter numeric(10, 2),
   start_hour_meter numeric(10, 2) not null,
   finish_hour_meter numeric(10, 2),
@@ -33,6 +39,12 @@ alter table public.machine_prestarts enable row level security;
 
 alter table public.machine_prestarts add column if not exists hour_meter numeric(10, 2);
 alter table public.machine_prestarts add column if not exists photo_url text;
+alter table public.machine_prestarts add column if not exists safe_to_operate_status text;
+alter table public.machine_prestarts add column if not exists fluids_checked_status text;
+alter table public.machine_prestarts add column if not exists tyres_tracks_checked_status text;
+alter table public.machine_prestarts add column if not exists guards_checked_status text;
+alter table public.machine_prestarts add column if not exists brakes_steering_checked_status text;
+alter table public.machine_prestarts add column if not exists faults_reported_status text;
 
 drop policy if exists "machines active read" on public.machines;
 create policy "machines active read" on public.machines
